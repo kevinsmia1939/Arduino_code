@@ -3,16 +3,19 @@
 // Define stepper motor connections and motor interface type. 
 // Motor interface type must be set to 1 when using a driver:
 #define stepPin 3
+#define DIR_PIN 4
 #define enablePin 5
 #define motorInterfaceType 1
 
 // Create a new instance of the AccelStepper class:
-AccelStepper stepper = AccelStepper(motorInterfaceType, stepPin);
+AccelStepper stepper = AccelStepper(motorInterfaceType, stepPin, DIR_PIN);
 
 // Variables for non-blocking serial print
 unsigned long previousMillis = 0;
 const long interval = 500; // Interval at which to print speed (milliseconds) */
 bool volt_high = false;
+float value;
+float voltage;
 
 void setup() {
   pinMode(enablePin, OUTPUT);

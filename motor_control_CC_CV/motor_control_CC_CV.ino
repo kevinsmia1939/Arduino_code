@@ -33,8 +33,8 @@ void loop() {
   }
   if (volt <= 1.60 && volt_high == true) {
     digitalWrite(enablePin, LOW); //Enable motor when LOW
-    stepper.setSpeed(speed);      
-    stepper.runSpeed();    
+    stepper.run();      
+    
   } else {
     volt_high = false;
     digitalWrite(enablePin, HIGH);

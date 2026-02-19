@@ -17,9 +17,9 @@ const unsigned long readInterval = 200;  // Adjust this to control how often the
 void setup() {
   pinMode(ENA_PIN, OUTPUT);
   digitalWrite(ENA_PIN, LOW);
-  stepper.setMaxSpeed(15000);
-  stepper.setAcceleration(8000);
-  stepper.moveTo(10000000);
+  stepper.setMaxSpeed(2000);
+  stepper.setAcceleration(50);
+  stepper.moveTo(1000000000);
 }
 
 void loop() {

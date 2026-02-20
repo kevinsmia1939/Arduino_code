@@ -10,7 +10,9 @@ const uint8_t STEP_OC1A_PIN = 9;     // STEP must be on OC1A (D9) for hardware t
 const uint8_t ENC_CLK = 4;
 const uint8_t ENC_DT  = 5;
 const uint8_t ENC_SW  = 6;
-const uint8_t RUN_INPUT_PIN = A0; // HIGH = run (ramp up), LOW = stop
+const uint8_t RUN_INPUT_A0 = A0;      // HIGH = run request
+const uint8_t RUN_INPUT_A1 = A1;      // HIGH = run request
+const uint8_t MOTOR_STATE_PIN = 3;    // LOW when motor ON, HIGH when motor OFF
 
 // ---------------- LCD ----------------
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -183,7 +185,10 @@ void setup() {
   pinMode(ENC_CLK, INPUT_PULLUP);
   pinMode(ENC_DT,  INPUT_PULLUP);
   pinMode(ENC_SW,  INPUT_PULLUP);
-  pinMode(RUN_INPUT_PIN, INPUT);
+  pinMode(RUN_INPUT_A0, INPUT);
+  pinMode(RUN_INPUT_A1, INPUT);
+  pinMode(MOTOR_STATE_PIN, OUTPUT);
+  digitalWrite(MOTOR_STATE_PIN, HIGH);
   lastCLK = digitalRead(ENC_CLK);
 
   lcd.init();
@@ -222,8 +227,10 @@ void loop() {
     }
   }
 
-  // --- A0 controls run/stop ---
-  bool runCommanded = (digitalRead(RUN_INPUT_PIN) == HIGH);
+  // --- A0/A1 control run/stop ---
+  // ON if A0 or A1 is HIGH; OFF only when both are LOW
+  bool runCommanded = (digitalRead(RUN_INPUT_A0) == HIGH) || (digitalRead(RUN_INPUT_A1) == HIGH);
+  digitalWrite(MOTOR_STATE_PIN, runCommanded ? LOW : HIGH);
 
   // --- Ramp currentHz toward targetHz (or 0 when stopped) ---
   unsigned long now = millis();

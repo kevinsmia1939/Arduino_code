@@ -10,6 +10,9 @@ const uint8_t STEP_OC1A_PIN = 9;     // STEP must be on OC1A (D9) for hardware t
 const uint8_t ENC_CLK = 4;
 const uint8_t ENC_DT  = 5;
 const uint8_t ENC_SW  = 6;
+const uint8_t RUN_INPUT_A0 = A0;      // HIGH = run request
+const uint8_t RUN_INPUT_A1 = A1;      // HIGH = run request
+const uint8_t MOTOR_STATE_PIN = 3;    // LOW when motor ON, HIGH when motor OFF
 
 // ---------------- LCD ----------------
 LiquidCrystal_I2C lcd(0x27, 16, 2);
@@ -23,8 +26,6 @@ const int microstep = 1;     // 1 if full-step; 2/4/8/16 if microstepping
 const float CLOCK_CORR = 1.002f;   // multiply step frequency by this
 
 // ---------------- Speed control ----------------
-volatile bool running = true;
-
 const float HZ_STEP = 0.1f;    // encoder step (Hz)
 const float HZ_MIN  = 0.0f;
 const float HZ_MAX  = 50.0f;   // adjust for your mechanics
@@ -159,7 +160,7 @@ void setStepFrequencyAuto(float f_step) {
 // Apply rotational frequency (Hz = rps) -> step frequency with calibration
 // NOTE: this applies to TIMER only (does NOT store the user's target)
 void applyHzToTimer(float hz_rps) {
-  if (!running || hz_rps <= 0.0f) {
+  if (hz_rps <= 0.0f) {
     timer1EnableToggleOC1A(false);
     return;
   }
@@ -184,6 +185,10 @@ void setup() {
   pinMode(ENC_CLK, INPUT_PULLUP);
   pinMode(ENC_DT,  INPUT_PULLUP);
   pinMode(ENC_SW,  INPUT_PULLUP);
+  pinMode(RUN_INPUT_A0, INPUT);
+  pinMode(RUN_INPUT_A1, INPUT);
+  pinMode(MOTOR_STATE_PIN, OUTPUT);
+  digitalWrite(MOTOR_STATE_PIN, HIGH);
   lastCLK = digitalRead(ENC_CLK);
 
   lcd.init();
@@ -214,15 +219,18 @@ void loop() {
     lastCLK = clkState;
   }
 
-  // --- Encoder button: RUN/STOP toggle ---
+  // --- Optional encoder button read (reserved for future use) ---
   if (digitalRead(ENC_SW) == LOW) {
     unsigned long now = millis();
     if (now - lastBtnTime > btnDebounceMs) {
-      running = !running;
       lastBtnTime = now;
-      // no immediate apply: ramp logic will handle smooth start/stop
     }
   }
+
+  // --- A0/A1 control run/stop ---
+  // ON if A0 or A1 is HIGH; OFF only when both are LOW
+  bool runCommanded = (digitalRead(RUN_INPUT_A0) == HIGH) || (digitalRead(RUN_INPUT_A1) == HIGH);
+  digitalWrite(MOTOR_STATE_PIN, runCommanded ? LOW : HIGH);
 
   // --- Ramp currentHz toward targetHz (or 0 when stopped) ---
   unsigned long now = millis();
@@ -230,7 +238,7 @@ void loop() {
     float dt = (now - lastRampUpdate) / 1000.0f;
     lastRampUpdate = now;
 
-    float desired = (running ? targetHz : 0.0f);
+    float desired = (runCommanded ? targetHz : 0.0f);
     float diff = desired - currentHz;
 
     if (diff > 0.0f) {
